@@ -26,17 +26,17 @@ import re
 from pathlib import Path
 from mitmproxy import http
 
-# Original iOS monthly In-App Purchase SKU -> Primary 90%-off (3 months) promotional SKU
+# Original iOS monthly SKU -> candidate promotional SKUs in priority order.
+# Selection: first candidate present in the response body wins; if none appear,
+# rewrite to the first candidate anyway (blind) and let the App Store sheet validate.
+# Set G1_STRICT_CATALOG=1 to skip rewriting on accounts with no promo SKUs at all.
+# Mirrors crhywun/g1-acq v7.6.0 field-tested behavior.
 SKU_MAP = {
-    "g1.ios.20tb.m.v2": "g1.20tb.3months_ip_90p.acq",
-    "g1.ios.30tb.ai.pro.m": "g1.ai.ultra.3months_ip_90p.acq",
+    "g1.ios.20tb.m.v2": ["g1.20tb.1month_eft.acq", "g1.20tb.3months_ip_90p.acq"],
+    "g1.ios.30tb.ai.pro.m": ["g1.ai.ultra.1month_eft.acq", "g1.ai.ultra.3months_ip_90p.acq"],
+    "g1.ios.2tb.ai.m": ["g1.2tb.ai.12months_ip_90p"],
 }
-
-# Fallback 75%-off (3 months) promotional SKU when 90p is not present in the catalog
-FALLBACK = {
-    "g1.20tb.3months_ip_90p.acq": "g1.20tb.3months_ip_75p.acq",
-    "g1.ai.ultra.3months_ip_90p.acq": "g1.ai.ultra.3months_ip_75p.acq",
-}
+FALLBACK = {}
 
 ACQ_REGEX = re.compile(r"g1\.[a-z0-9._]{2,60}acq")
 ALL_SKU_REGEX = re.compile(r"g1\.[a-z0-9._]{2,60}")
@@ -115,19 +115,28 @@ def response(flow: http.HTTPFlow) -> None:
 
     out = body
     total = 0
-    for src_sku, target_sku in SKU_MAP.items():
+    for src_sku, target_skus in SKU_MAP.items():
         count = out.count(src_sku)
         if count == 0:
             continue
 
-        chosen_sku = target_sku
-        if chosen_sku not in catalog and FALLBACK.get(chosen_sku) in catalog:
-            fb = FALLBACK[chosen_sku]
+        chosen_sku = None
+        for candidate in target_skus:
+            if candidate in catalog:
+                chosen_sku = candidate
+                break
+        if chosen_sku is None:
+            if STRICT_CATALOG:
+                print(
+                    f"[g1-acq] No promo SKU for {src_sku} in this account's catalog; leaving full price.",
+                    flush=True,
+                )
+                continue
+            chosen_sku = target_skus[0]
             print(
-                f"[g1-acq] Primary SKU {chosen_sku} not in catalog -> falling back to {fb}",
+                f"[g1-acq] {src_sku}: no candidate in page body; blind-rewriting to {chosen_sku} (App Store sheet will validate).",
                 flush=True,
             )
-            chosen_sku = fb
 
         out = out.replace(src_sku, chosen_sku)
         total += count
