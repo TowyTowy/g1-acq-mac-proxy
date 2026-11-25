@@ -33,15 +33,21 @@ from mitmproxy import http
 # Mirrors crhywun/g1-acq v7.6.0 field-tested behavior.
 SKU_MAP = {
     "g1.ios.20tb.m.v2": [
+        "g1.20tb.3months_ip_90p.acq",
+        "g1.20tb.3months_ip_85p.acq",
+        "g1.20tb.3months_ip_80p.acq",
+        "g1.20tb.3months_ip_75p.acq",
         "g1.play.20tb.12months_eft",
         "g1.20tb.1month_eft.acq",
-        "g1.20tb.3months_ip_90p.acq",
     ],
     "g1.ios.30tb.ai.pro.m": [
-        "g1.ai.pro.12months_eft",
-        "g1.ai.ultra.12months_eft",
-        "g1.ai.ultra.1month_eft.acq",
         "g1.ai.ultra.3months_ip_90p.acq",
+        "g1.ai.ultra.3months_ip_85p.acq",
+        "g1.ai.ultra.3months_ip_80p.acq",
+        "g1.ai.ultra.3months_ip_75p.acq",
+        "g1.ai.ultra.1month_eft.acq",
+        "g1.ai.ultra.12months_eft",
+        "g1.ai.pro.12months_eft",
     ],
     "g1.ios.2tb.ai.m": ["g1.2tb.ai.12months_ip_90p"],
 }
